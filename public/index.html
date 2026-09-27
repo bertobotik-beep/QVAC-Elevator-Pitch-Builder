@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QVAC Elevator Pitch Builder</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #ecfdf5 0%, #d1fae5 100%);
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #064e3b;
+    display: flex;
+    justify-content: center;
+    padding: 46px 20px;
+  }
+  .wrap { width: 100%; max-width: 560px; }
+  h1 { font-size: 1.5rem; margin: 0 0 6px; color: #047857; font-weight: 800; text-align: center; }
+  .subtitle { color: #348a6e; margin-bottom: 24px; font-size: 0.9rem; text-align: center; }
+  .card {
+    background: #ffffff;
+    border: 2px solid #a7f3d0;
+    border-radius: 16px;
+    padding: 28px 26px;
+  }
+  label { display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; color: #047857; }
+  input[type=text] {
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: 10px;
+    border: 2px solid #a7f3d0;
+    background: #f0fdf9;
+    color: #064e3b;
+    font-family: inherit;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+  button.action {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    background: #059669;
+    color: #fff;
+    width: 100%;
+    margin-top: 4px;
+  }
+  button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status { margin-top: 14px; font-size: 0.85rem; color: #348a6e; min-height: 1.2em; text-align: center; }
+  .result-body {
+    background: #f0fdf9;
+    border-left: 4px solid #059669;
+    padding: 16px 16px;
+    margin-top: 18px;
+    border-radius: 8px;
+    font-size: 1.02rem;
+    line-height: 1.6;
+  }
+  .footer-note { color: #348a6e; font-size: 0.78rem; margin-top: 20px; text-align: center; }
+  .spinner {
+    display: inline-block;
+    width: 13px; height: 13px;
+    border: 2px solid #d1fae5;
+    border-top-color: #059669;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>QVAC Elevator Pitch Builder</h1>
+    <p class="subtitle">Fill in your idea, get a short 30-second-style pitch. 100% on-device.</p>
+
+    <div class="card">
+      <label for="whatInput">What is it?</label>
+      <input type="text" id="whatInput" placeholder="e.g. a browser extension that auto-fills expense reports" />
+
+      <label for="whoInput">Who is it for?</label>
+      <input type="text" id="whoInput" placeholder="e.g. small business owners" />
+
+      <label for="problemInput">What problem does it solve?</label>
+      <input type="text" id="problemInput" placeholder="e.g. manually copying receipt numbers into spreadsheets" />
+
+      <button class="action" id="generateBtn">Build My Pitch</button>
+      <div class="status" id="status"></div>
+      <div id="resultBox"></div>
+    </div>
+
+    <p class="footer-note">Everything runs locally on your machine. No text ever leaves this device.</p>
+  </div>
+
+  <script>
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    const whatInput = document.getElementById('whatInput');
+    const whoInput = document.getElementById('whoInput');
+    const problemInput = document.getElementById('problemInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const status = document.getElementById('status');
+    const resultBox = document.getElementById('resultBox');
+
+    async function generate() {
+      const what = whatInput.value.trim();
+      const who = whoInput.value.trim();
+      const problem = problemInput.value.trim();
+      if (!what || !who || !problem) {
+        status.textContent = 'Please fill in all three fields.';
+        return;
+      }
+      generateBtn.disabled = true;
+      resultBox.innerHTML = '';
+      status.innerHTML = '<span class="spinner"></span>Building your pitch...';
+
+      try {
+        const res = await fetch('/api/pitch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ what, who, problem }),
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        status.textContent = '';
+        resultBox.innerHTML = `<div class="result-body">${escapeHtml(data.pitch)}</div>`;
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+      } finally {
+        generateBtn.disabled = false;
+      }
+    }
+
+    generateBtn.addEventListener('click', generate);
+    [whatInput, whoInput, problemInput].forEach((el) => {
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+    });
+  </script>
+</body>
+</html>
